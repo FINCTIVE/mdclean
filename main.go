@@ -38,12 +38,12 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					if findImage(imagePath, dirPath, string(bytes)) {
-						fmt.Print("  (y)\n")
+					if findImage(imagePath, string(bytes)) {
+						fmt.Print("  (matched)\n")
 						usedByMarkdown = true
 						break
 					} else {
-						fmt.Print("  (n)\n")
+						fmt.Print("  (no)\n")
 					}
 				}
 			}
@@ -59,14 +59,34 @@ func main() {
 		fmt.Println(err)
 	}
 
+	if len(unusedImages) == 0 {
+		fmt.Println("\n\nClean! There are no redundant images.")
+		return
+	}
+
 	fmt.Println("\n\nResults(images which are not used by markdown files):")
 	for _, i := range unusedImages {
 		fmt.Println(i)
 	}
+	fmt.Println("Do you want to delete all of them ? (yes)")
+	var inputStr string
+	_, _ = fmt.Scanf("%s", &inputStr)
+	if inputStr == "yes" {
+		for _, unusedPath := range unusedImages {
+			err := os.Remove(unusedPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		fmt.Println("Deleted!")
+	} else {
+		fmt.Println("Quit without doing anything.")
+	}
 }
 
 // findImage checks whether the markdown file uses the image.
-func findImage(imagePath string, dirPath string, mdContent string) (exist bool) {
+func findImage(imagePath string, mdContent string) (exist bool) {
 	mdImageRe := regexp.MustCompile(`!\[[^]]*]\((?P<image>.*)\)`)
 	results := mdImageRe.FindAllStringSubmatch(mdContent, -1)
 
@@ -75,10 +95,7 @@ func findImage(imagePath string, dirPath string, mdContent string) (exist bool) 
 	}
 
 	for _, subMatch := range results {
-		// TODO: check whether the method is correct
-		mdImage := filepath.Join(dirPath, subMatch[1])
-		imagePath, _ := filepath.Abs(imagePath)
-		//fmt.Println(mdImage, imagePath)
+		mdImage := filepath.Join(filepath.Dir(imagePath), subMatch[1])
 		if mdImage == imagePath {
 			return true
 		}
